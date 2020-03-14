@@ -1,3 +1,9 @@
+CreamAppetizerCore/bin
+CreamAppetizerCore/obj
 bin/
 obj/
 /packages/
+published
+/.idea/.idea.CreamAppetizerCore/.idea/contentModel.xml
+/.idea/.idea.CreamAppetizerCore/.idea/modules.xml
+/.idea/.idea.CreamAppetizerCore/riderModule.iml
