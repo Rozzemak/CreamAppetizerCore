@@ -19,6 +19,7 @@ namespace CreamAppetizerCore
     {
         public static async Task Main(string[] args)
         {
+            var serviceRefs = new List<string>();
             var host = new HostBuilder()
                 .ConfigureServices(async (hostContext, services) =>
                 {
@@ -26,29 +27,31 @@ namespace CreamAppetizerCore
                     services.AddTransient<CreamAppetizer>();
                     
                     // InitSingletons
-                    await InitServicesByNamespaceNameAsync("Singletons", services,
+                    serviceRefs.AddRange((await InitServicesByNamespaceNameAsync("Singletons", services,
                         (collection, interfaceType, implType) => services.AddSingleton(interfaceType, implType))
-                        .ConfigureAwait(false);
+                        .ConfigureAwait(false)).Item1.Select(type => type.Name));
                     // InitScopes
-                    await InitServicesByNamespaceNameAsync("Scoped", services,
+                    serviceRefs.AddRange((await InitServicesByNamespaceNameAsync("Scoped", services,
                         (collection, interfaceType, implType) => services.AddScoped(interfaceType, implType))
-                        .ConfigureAwait(false);
-                    
+                        .ConfigureAwait(false)).Item1.Select(type => type.Name));
                     //services.AddSingleton<IDataAccessLayer, CDataAccessLayer>(); 
                 }).Build();
             using var serviceScope = host.Services.CreateScope();
             var servicesProvider = serviceScope.ServiceProvider;
             try
             {
-                var creamCoreService = servicesProvider.GetRequiredService<CreamAppetizer>();
-                await creamCoreService.Run().ConfigureAwait(false);
                 var logger = servicesProvider.GetService<ILogger<CreamAppetizer>>();
-                logger.LogInformation(nameof(AppetizerServiceBuilder) + " finished successfully init services.");
-                var autoAddedSingletonTest = servicesProvider.GetRequiredService<ISteamLib>();
-                var result = (await autoAddedSingletonTest.GetSteamLibrariesAsync().ConfigureAwait(false)).Select(
-                    pair => $"{pair.Key} {pair.Value}").ToArray();
-                logger.LogInformation(
-                    $"{nameof(autoAddedSingletonTest)} {string.Join("", result)}");
+                logger.LogInformation(nameof(AppetizerServiceBuilder) + $" successfully built host. Services: [{serviceRefs.Count()}] " 
+                                                                      + $"=> [{string.Join(", ", serviceRefs)}]");
+                var creamCoreService = servicesProvider.GetRequiredService<CreamAppetizer>(); 
+                var creamRun = creamCoreService.RunAsync().ConfigureAwait(false);
+                logger.LogInformation(nameof(CreamAppetizer) + " is running now.");
+                await creamRun;
+                //var autoAddedSingletonTest = servicesProvider.GetRequiredService<ISteamLib>();
+                //var result = (await autoAddedSingletonTest.GetSteamLibrariesAsync().ConfigureAwait(false)).Select(
+                //    pair => $"{pair.Key} {pair.Value}").ToArray();
+                //logger.LogInformation(
+                //    $"{nameof(autoAddedSingletonTest)} {string.Join("", result)}");
             }
             catch (Exception ex)
             {
@@ -69,8 +72,8 @@ namespace CreamAppetizerCore
             InitServicesByNamespaceNameAsync(string namespaceName, IServiceCollection serviceCollection, Action<IServiceCollection, Type, Type> services)
         {
             var scopeTypes = await Assembly.GetAssembly(typeof(CreamAppetizer)).DefinedTypes
-                .Where(info => (bool) info?.FullName?.ToLower()?.Contains(namespaceName.ToLower()) && info.IsClass || info.IsInterface)
-                .Select(info => info).ToAsyncEnumerable().ToListAsync().
+                .Where(info => (bool) info?.FullName?.ToLower()?.Contains(namespaceName.ToLower()) && (info.IsClass || info.IsInterface))
+                .ToAsyncEnumerable().ToListAsync().
                 ConfigureAwait(false);
             var nonInterfaceScopeTypes = scopeTypes.Where(type => !type.IsInterface).ToList();
             foreach (var type in scopeTypes.Where(type => type.IsInterface))

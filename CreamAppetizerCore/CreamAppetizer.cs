@@ -1,12 +1,20 @@
 ﻿using System.Threading.Tasks;
+using CreamAppetizerCore.Model.Services.Singletons.Interfaces;
 
 namespace CreamAppetizerCore
 {
     public class CreamAppetizer
     {
-        public async Task Run()
+        public readonly ISteamLib SteamLib;
+
+        public CreamAppetizer(ISteamLib steamLib)
         {
-            await Task.Run(()=>{});
+            SteamLib = steamLib;
+        }
+
+        public async Task RunAsync()
+        {
+            await this.SteamLib.GetSteamLibrariesAsync();
         }
     }
 }

@@ -15,6 +15,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="Model\Services\Options" />
       <Folder Include="Model\Services\Scoped\Interfaces" />
     </ItemGroup>
 
